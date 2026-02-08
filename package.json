@@ -1,0 +1,8 @@
+{
+  "name": "user-auth-management",
+  "private": true,
+  "version": "2.0.1",
+  "scripts": {
+    "build": "npm --prefix frontend install --no-fund --no-audit && npm --prefix frontend run build"
+  }
+}

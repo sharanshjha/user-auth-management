@@ -196,13 +196,13 @@ Failure:
 
 ### Netlify (frontend)
 
-This repo now includes a root `netlify.toml` that tells Netlify exactly how to build this monorepo:
+This repo includes both root and frontend Netlify configs so deployment still works even if Netlify is configured at repo root or `frontend/` base:
 
-- Build command: `npm --prefix frontend ci && npm --prefix frontend run build`
-- Publish directory: `frontend/dist`
-- SPA rewrite fallback: `/* -> /index.html` (prevents React Router 404s on refresh/deep links)
+- Build command: `npm run build` (root command delegates to frontend build)
+- Publish directory: `frontend` (postbuild mirrors compiled output for compatibility)
+- SPA rewrite fallback: `/* -> /index.html`
 
-It also includes `frontend/public/_redirects` as a backup SPA rule.
+`frontend/public/_redirects` is included as a backup SPA rule.
 
 ### Render (backend)
 
@@ -238,6 +238,7 @@ Set secrets in Render dashboard:
 
 - Netlify `Page not found`: ensure the deploy uses this repo root so `netlify.toml` is detected, then redeploy.
 - Netlify path refresh returns 404: fixed by the included SPA rewrite config (`netlify.toml` + `_redirects`).
+- Netlify blank page with console JSX errors: fixed by forcing a real production build during deploy (instead of serving raw `frontend/src`).
 - `401 Invalid authentication token`: login again to refresh your session
 - `403 not allowed`: current account is `member`; use an `admin` account
 - `Cannot delete the last admin account`: create/promote another admin first
