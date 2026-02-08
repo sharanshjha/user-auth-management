@@ -1,224 +1,238 @@
-# User Authentication & Management System
+# PulseAuth Console
 
-**Created by: Sharansh Jha (B.Tech CSE Student)**
+A full revamp of the original project into a production-ready auth + user-management platform.
 
-This project is created for learning backend development and REST APIs.
+Think: secure API, role-based access, and a React dashboard that looks like your product team drank three cold brews and shipped from the future.
 
-## 📌 Project Description
+## What got upgraded
 
-A simple full-stack web application that demonstrates user authentication and CRUD operations using **RESTful API architecture**. The backend is built with Node.js, Express, and MongoDB following REST API principles, while the frontend uses HTML, Tailwind CSS, and vanilla JavaScript to consume the REST APIs.
+- Rebuilt frontend into a modern React SPA (Vite + React Router)
+- Reworked backend into a secure JWT-based API
+- Added role-aware authorization (`admin`, `member`)
+- Added profile management + admin user directory controls
+- Added global API error handling with consistent response shape
+- Added production middleware: `helmet`, rate limiting, request logs
+- Added environment templates for backend + frontend
+- Added Render blueprint for API + static web deployment
 
-## 🌐 REST API Usage
-
-This project is built using **RESTful APIs** following proper HTTP methods (GET, POST, PUT, DELETE) and JSON-based request-response structure.
-
-### REST API Principles Implemented:
-- ✅ **Resource-based URLs** - `/api/v1/users`
-- ✅ **HTTP Methods** - GET (read), POST (create), PUT (update), DELETE (delete)
-- ✅ **JSON Format** - All requests and responses use JSON
-- ✅ **Proper Status Codes** - 200 OK, 201 Created, 400 Bad Request, 404 Not Found, 500 Internal Server Error
-- ✅ **API Versioning** - `/api/v1/` for future compatibility
-- ✅ **Stateless Communication** - Each request is independent
-
-## ✨ Features
-
-- **User Registration** - Create new user accounts with name, email, and password
-- **User Login** - Authenticate users with email and password
-- **View All Users** - Display all registered users in a table
-- **Update User** - Edit user information (name and email)
-- **Delete User** - Remove users from the database
-- **Password Hashing** - Secure password storage using bcrypt
-- **Responsive UI** - Clean and modern interface using Tailwind CSS
-
-## 🛠️ Tech Stack
-
-### Backend
-- Node.js
-- Express.js
-- MongoDB
-- Mongoose
-- bcrypt (for password hashing)
-- CORS (for cross-origin requests)
+## Tech stack
 
 ### Frontend
-- HTML5
-- Tailwind CSS (via CDN)
-- Vanilla JavaScript
-- Fetch API
+- React 18
+- React Router 6
+- Vite 5
+- Custom CSS system (responsive, animated, non-boilerplate UI)
 
-## 📁 Project Structure
+### Backend
+- Node.js + Express
+- MongoDB + Mongoose
+- JWT (`jsonwebtoken`)
+- Password hashing (`bcrypt`)
+- Security middleware (`helmet`, `express-rate-limit`, `cors`)
+- Request logging (`morgan`)
 
-```
+## Architecture
+
+```text
 user-auth-management/
-│
-├── backend/
-│   ├── models/
-│   │   └── User.js
-│   ├── routes/
-│   │   └── userRoutes.js
-│   ├── controllers/
-│   │   └── userController.js
-│   ├── config/
-│   │   └── db.js
-│   ├── server.js
-│   ├── .env
-│   └── package.json
-│
-├── frontend/
-│   ├── register.html
-│   ├── login.html
-│   └── users.html
-│
-└── README.md
+|-- backend/
+|   |-- config/db.js
+|   |-- controllers/
+|   |   |-- authController.js
+|   |   `-- userController.js
+|   |-- middleware/
+|   |   |-- authMiddleware.js
+|   |   `-- errorMiddleware.js
+|   |-- models/User.js
+|   |-- routes/
+|   |   |-- authRoutes.js
+|   |   `-- userRoutes.js
+|   |-- utils/
+|   |   |-- appError.js
+|   |   |-- asyncHandler.js
+|   |   |-- token.js
+|   |   `-- validators.js
+|   |-- .env.example
+|   |-- package.json
+|   `-- server.js
+|-- frontend/
+|   |-- src/
+|   |   |-- api/client.js
+|   |   |-- components/
+|   |   |   |-- ProtectedRoute.jsx
+|   |   |   `-- Toast.jsx
+|   |   |-- context/AuthContext.jsx
+|   |   |-- pages/
+|   |   |   |-- AuthPage.jsx
+|   |   |   `-- DashboardPage.jsx
+|   |   |-- App.jsx
+|   |   |-- main.jsx
+|   |   `-- styles.css
+|   |-- .env.example
+|   |-- package.json
+|   `-- vite.config.js
+|-- render.yaml
+`-- README.md
 ```
 
-## 🚀 How to Run Locally
+## Quick start
 
-### Prerequisites
-- Node.js installed on your system
-- MongoDB installed and running locally
+### 1. Backend setup
 
-### Backend Setup
-
-1. Navigate to the backend folder:
 ```bash
 cd backend
-```
-
-2. Install dependencies:
-```bash
 npm install
+cp .env.example .env
 ```
 
-3. Make sure MongoDB is running on your system
+Update `backend/.env`:
 
-4. Start the server:
+```env
+PORT=3000
+NODE_ENV=development
+MONGO_URI=mongodb://127.0.0.1:27017/user-auth-management
+JWT_SECRET=replace-with-a-long-random-secret
+JWT_EXPIRES_IN=7d
+CLIENT_URL=http://localhost:5173
+```
+
+Run backend:
+
 ```bash
-npm start
+npm run dev
 ```
 
-The REST API server will run on `http://localhost:3000`
+### 2. Frontend setup
 
-### Frontend Setup
-
-1. Navigate to the frontend folder:
 ```bash
 cd frontend
+npm install
+cp .env.example .env
 ```
 
-2. Open any HTML file in your browser:
-   - `register.html` - To create a new account
-   - `login.html` - To login
-   - `users.html` - To view all users
+Update `frontend/.env`:
 
-Or you can use Live Server extension in VS Code to run the frontend.
+```env
+VITE_API_URL=http://localhost:3000/api/v1
+```
 
-## 📡 REST API Endpoints
+Run frontend:
 
-All endpoints follow REST API standards with proper HTTP methods and JSON responses.
+```bash
+npm run dev
+```
 
-| HTTP Method | Endpoint | Description | Status Codes |
-|-------------|----------|-------------|--------------|
-| POST | `/api/v1/users/register` | Register a new user | 201, 400, 500 |
-| POST | `/api/v1/users/login` | Login user | 200, 400, 500 |
-| GET | `/api/v1/users` | Get all users | 200, 500 |
-| PUT | `/api/v1/users/:id` | Update user by ID | 200, 404, 500 |
-| DELETE | `/api/v1/users/:id` | Delete user by ID | 200, 404, 500 |
+Open `http://localhost:5173`.
 
-### REST API Features:
-- **Versioned URLs** - `/api/v1/` prefix for all endpoints
-- **JSON Responses** - All responses in JSON format
-- **HTTP Status Codes** - Proper status codes for each operation
-- **CRUD Operations** - Complete Create, Read, Update, Delete functionality
+## API reference
 
-## 📝 REST API Testing with Postman
+Base URL: `http://localhost:3000/api/v1`
 
-You can test the REST APIs using Postman. All endpoints use JSON format.
+### Health
 
-### Register User (POST)
-- **Method:** POST
-- **URL:** `http://localhost:3000/api/v1/users/register`
-- **Headers:** `Content-Type: application/json`
-- **Body (JSON):**
+- `GET /health` -> API health payload
+
+### Auth
+
+- `POST /auth/register`
+  - Body: `{ "name", "email", "password" }`
+  - Returns: JWT + user
+  - Note: first registered user becomes `admin`
+
+- `POST /auth/login`
+  - Body: `{ "email", "password" }`
+  - Returns: JWT + user
+
+### Profile (authenticated)
+
+Use header:
+
+```http
+Authorization: Bearer <token>
+```
+
+- `GET /users/me` -> current profile
+- `PATCH /users/me` -> update own `name`, `email`, `password`
+- `DELETE /users/me` -> delete own account (blocked for last admin)
+
+### Admin-only user management
+
+- `GET /users?page=1&limit=12&q=search`
+- `PATCH /users/:id` (update `name`, `email`, `role`)
+- `DELETE /users/:id`
+
+## Response contract
+
+Success:
+
 ```json
 {
-  "name": "Test User",
-  "email": "test@example.com",
-  "password": "password123"
+  "success": true,
+  "message": "Human readable message",
+  "data": {}
 }
 ```
-- **Success Response:** 201 Created
 
-### Login User (POST)
-- **Method:** POST
-- **URL:** `http://localhost:3000/api/v1/users/login`
-- **Headers:** `Content-Type: application/json`
-- **Body (JSON):**
+Failure:
+
 ```json
 {
-  "email": "test@example.com",
-  "password": "password123"
+  "success": false,
+  "message": "Error message"
 }
 ```
-- **Success Response:** 200 OK
 
-### Get All Users (GET)
-- **Method:** GET
-- **URL:** `http://localhost:3000/api/v1/users`
-- **Success Response:** 200 OK
+## Security details
 
-### Update User (PUT)
-- **Method:** PUT
-- **URL:** `http://localhost:3000/api/v1/users/{user_id}`
-- **Headers:** `Content-Type: application/json`
-- **Body (JSON):**
-```json
-{
-  "name": "Updated Name",
-  "email": "updated@example.com"
-}
-```
-- **Success Response:** 200 OK
-- **Error Response:** 404 Not Found
+- Passwords are hashed with bcrypt salt rounds
+- JWT tokens are signed with configurable expiry
+- Rate limiting enabled (200 requests / 10 min / IP)
+- Helmet headers enabled
+- CORS origin allow-list via `CLIENT_URL`
+- Structured centralized error handling
+- Admin safety guard prevents deleting/demoting the final admin
 
-### Delete User (DELETE)
-- **Method:** DELETE
-- **URL:** `http://localhost:3000/api/v1/users/{user_id}`
-- **Success Response:** 200 OK
-- **Error Response:** 404 Not Found
+## Deployment (Render)
 
-## 🎓 Learning Outcomes
+`render.yaml` includes:
 
-Through this project, I learned:
-- **Building REST APIs** with Express.js following REST principles
-- **HTTP Methods** - GET, POST, PUT, DELETE for different operations
-- **HTTP Status Codes** - 200, 201, 400, 404, 500 for proper responses
-- **JSON Format** - Request and response handling in JSON
-- **API Versioning** - Using `/api/v1/` for future compatibility
-- **Database operations** with MongoDB and Mongoose
-- **Password hashing** and basic security with bcrypt
-- **Frontend-backend integration** using fetch API
-- **CRUD operations** - Create, Read, Update, Delete
-- **Asynchronous JavaScript** (async/await)
-- **Error handling** in Node.js
-- **Client-Server communication** using REST APIs
-- **API testing** with Postman
+- `pulseauth-api` (Node web service)
+- `pulseauth-web` (Static frontend)
 
-This project helped me understand **REST APIs, backend routing, and client-server communication** in a practical way.
+Set secrets in Render dashboard:
 
-## 📌 Notes
+- API: `MONGO_URI`, `JWT_SECRET`, `CLIENT_URL`
+- Web: `VITE_API_URL`
 
-- This is a beginner-level project for learning purposes
-- Not intended for production use
-- Basic security implementation (no JWT, no advanced authentication)
-- Simple and readable code structure
+## Scripts
 
-## 👨‍💻 Author
+### Backend
 
-**Sharansh Jha**  
-B.Tech CSE Student  
-Learning Backend Development
+- `npm run dev` -> start with nodemon
+- `npm start` -> production start
+- `npm run check` -> syntax check
 
----
+### Frontend
 
-*This project is created as part of learning backend development and understanding how REST APIs work.*
+- `npm run dev` -> local dev server
+- `npm run build` -> production build
+- `npm run preview` -> preview built app
+
+## Product notes
+
+- This is now production-structured, not tutorial-structured
+- Admin dashboard visibility is role-based
+- UI is intentionally expressive (future-facing) while staying responsive
+
+## Troubleshooting
+
+- `401 Invalid authentication token`: login again to refresh your session
+- `403 not allowed`: current account is `member`; use an `admin` account
+- `Cannot delete the last admin account`: create/promote another admin first
+- CORS errors: make sure `CLIENT_URL` matches your frontend origin exactly
+
+## Credits
+
+Built and revamped by **Sharansh Jha**.
+
+If the app feels fast, secure, and slightly overconfident, that is intentional.

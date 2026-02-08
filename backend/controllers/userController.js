@@ -1,209 +1,242 @@
-// user controller file
-// logic written by Sharansh Jha
-// beginner level implementation
-// REST API controller with proper HTTP methods and status codes
-
 const User = require('../models/User');
-const bcrypt = require('bcrypt');
+const AppError = require('../utils/appError');
+const asyncHandler = require('../utils/asyncHandler');
+const {
+  normalizeEmail,
+  isValidEmail,
+  isValidName,
+  getPasswordValidationMessage,
+} = require('../utils/validators');
 
-// REST API to register new user
-// HTTP Method: POST
-// API tested using Postman
-const registerUser = async (req, res) => {
-    try {
-        // getting data from request body
-        const { name, email, password } = req.body;
+const sanitizeUser = (user) => ({
+  id: user.id,
+  name: user.name,
+  email: user.email,
+  role: user.role,
+  lastLoginAt: user.lastLoginAt,
+  createdAt: user.createdAt,
+  updatedAt: user.updatedAt,
+});
 
-        // checking if all fields are provided
-        if (!name || !email || !password) {
-            // sending 400 Bad Request status code
-            return res.status(400).json({ message: 'Please provide all fields' });
-        }
+const getCurrentUser = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user.id);
 
-        // checking if user already exists
-        const userExists = await User.findOne({ email: email });
-        
-        if (userExists) {
-            // sending 400 status as user already exists
-            return res.status(400).json({ message: 'User already exists with this email' });
-        }
+  if (!user) {
+    throw new AppError('User not found', 404);
+  }
 
-        // hashing password using bcrypt
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(password, salt);
+  res.status(200).json({
+    success: true,
+    message: 'Profile loaded',
+    data: {
+      user: sanitizeUser(user),
+    },
+  });
+});
 
-        // creating new user
-        const newUser = await User.create({
-            name: name,
-            email: email,
-            password: hashedPassword
-        });
+const listUsers = asyncHandler(async (req, res) => {
+  const page = Number.parseInt(req.query.page, 10) || 1;
+  const limit = Math.min(Number.parseInt(req.query.limit, 10) || 20, 100);
+  const search = (req.query.q || '').trim();
 
-        // sending 201 Created status code as per REST API standards
-        // sending response in JSON format as REST API returns JSON data
-        res.status(201).json({
-            message: 'User registered successfully',
-            user: {
-                id: newUser._id,
-                name: newUser.name,
-                email: newUser.email
-            }
-        });
+  const filter = search
+    ? {
+        $or: [
+          { name: { $regex: search, $options: 'i' } },
+          { email: { $regex: search, $options: 'i' } },
+        ],
+      }
+    : {};
 
-    } catch (error) {
-        console.log('Error in registerUser:', error.message);
-        // sending 500 Internal Server Error status code
-        res.status(500).json({ message: 'Server error occurred' });
+  const [users, total] = await Promise.all([
+    User.find(filter)
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(limit),
+    User.countDocuments(filter),
+  ]);
+
+  res.status(200).json({
+    success: true,
+    message: 'Users loaded',
+    data: {
+      users: users.map(sanitizeUser),
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.max(1, Math.ceil(total / limit)),
+      },
+    },
+  });
+});
+
+const updateOwnProfile = asyncHandler(async (req, res) => {
+  const { name, email, password } = req.body;
+
+  if (!name && !email && !password) {
+    throw new AppError('At least one field is required', 400);
+  }
+
+  const user = await User.findById(req.user.id).select('+password');
+
+  if (!user) {
+    throw new AppError('User not found', 404);
+  }
+
+  if (name !== undefined) {
+    if (!isValidName(name)) {
+      throw new AppError('Name must be between 2 and 60 characters', 400);
     }
-};
+    user.name = name.trim();
+  }
 
-// REST API to login user
-// HTTP Method: POST
-// returns user data in JSON format
-const loginUser = async (req, res) => {
-    try {
-        // getting email and password from request
-        const { email, password } = req.body;
-
-        // checking if fields are provided
-        if (!email || !password) {
-            // sending 400 Bad Request
-            return res.status(400).json({ message: 'Please provide email and password' });
-        }
-
-        // finding user by email
-        const user = await User.findOne({ email: email });
-
-        if (!user) {
-            // sending 400 for invalid credentials
-            return res.status(400).json({ message: 'Invalid credentials' });
-        }
-
-        // comparing password with hashed password
-        const isPasswordCorrect = await bcrypt.compare(password, user.password);
-
-        if (!isPasswordCorrect) {
-            // password doesn't match
-            return res.status(400).json({ message: 'Invalid credentials' });
-        }
-
-        // if login successful, sending 200 OK status
-        // sending response in JSON format as REST API returns JSON data
-        res.status(200).json({
-            message: 'Login successful',
-            user: {
-                id: user._id,
-                name: user.name,
-                email: user.email
-            }
-        });
-
-    } catch (error) {
-        console.log('Error in loginUser:', error.message);
-        // sending 500 Internal Server Error
-        res.status(500).json({ message: 'Server error occurred' });
+  if (email !== undefined) {
+    const normalizedEmail = normalizeEmail(email);
+    if (!isValidEmail(normalizedEmail)) {
+      throw new AppError('Please provide a valid email address', 400);
     }
-};
 
-// REST API to get all users
-// HTTP Method: GET - used to fetch data as per REST standards
-// returns array of users in JSON format
-const getAllUsers = async (req, res) => {
-    try {
-        // fetching all users from database
-        const users = await User.find({}).select('-password'); // excluding password field
-
-        // sending 200 OK status with data
-        // sending response in JSON format as REST API returns JSON data
-        res.status(200).json({
-            message: 'Users fetched successfully',
-            count: users.length,
-            users: users
-        });
-
-    } catch (error) {
-        console.log('Error in getAllUsers:', error.message);
-        // sending 500 Internal Server Error
-        res.status(500).json({ message: 'Server error occurred' });
+    const existingUser = await User.findOne({ email: normalizedEmail });
+    if (existingUser && existingUser.id !== user.id) {
+      throw new AppError('Email already in use', 409);
     }
-};
 
-// REST API to update user
-// HTTP Method: PUT - used to update data as per REST standards
-// takes user ID from URL params
-const updateUser = async (req, res) => {
-    try {
-        // getting user id from params
-        const userId = req.params.id;
-        
-        // getting updated data from body
-        const { name, email } = req.body;
+    user.email = normalizedEmail;
+  }
 
-        // finding and updating user
-        const updatedUser = await User.findByIdAndUpdate(
-            userId,
-            { name: name, email: email },
-            { new: true } // this returns updated document
-        ).select('-password');
-
-        if (!updatedUser) {
-            // sending 404 Not Found if user doesn't exist
-            return res.status(404).json({ message: 'User not found' });
-        }
-
-        // sending 200 OK with updated data
-        // sending response in JSON format as REST API returns JSON data
-        res.status(200).json({
-            message: 'User updated successfully',
-            user: updatedUser
-        });
-
-    } catch (error) {
-        console.log('Error in updateUser:', error.message);
-        // sending 500 Internal Server Error
-        res.status(500).json({ message: 'Server error occurred' });
+  if (password !== undefined) {
+    const passwordMessage = getPasswordValidationMessage(password);
+    if (passwordMessage) {
+      throw new AppError(passwordMessage, 400);
     }
-};
+    user.password = password;
+  }
 
-// REST API to delete user
-// HTTP Method: DELETE - used to delete data as per REST standards
-// takes user ID from URL params
-const deleteUser = async (req, res) => {
-    try {
-        // getting user id from params
-        const userId = req.params.id;
+  await user.save();
 
-        // finding and deleting user
-        const deletedUser = await User.findByIdAndDelete(userId);
+  res.status(200).json({
+    success: true,
+    message: 'Profile updated',
+    data: {
+      user: sanitizeUser(user),
+    },
+  });
+});
 
-        if (!deletedUser) {
-            // sending 404 Not Found if user doesn't exist
-            return res.status(404).json({ message: 'User not found' });
-        }
+const deleteOwnProfile = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user.id);
 
-        // sending 200 OK with deleted user data
-        // sending response in JSON format as REST API returns JSON data
-        res.status(200).json({
-            message: 'User deleted successfully',
-            user: {
-                id: deletedUser._id,
-                name: deletedUser.name,
-                email: deletedUser.email
-            }
-        });
+  if (!user) {
+    throw new AppError('User not found', 404);
+  }
 
-    } catch (error) {
-        console.log('Error in deleteUser:', error.message);
-        // sending 500 Internal Server Error
-        res.status(500).json({ message: 'Server error occurred' });
+  if (user.role === 'admin') {
+    const adminCount = await User.countDocuments({ role: 'admin' });
+    if (adminCount <= 1) {
+      throw new AppError('Cannot delete the last admin account', 400);
     }
-};
+  }
 
-// exporting all functions
+  await user.deleteOne();
+
+  res.status(200).json({
+    success: true,
+    message: 'Your account was deleted',
+  });
+});
+
+const updateUserById = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { name, email, role } = req.body;
+
+  if (!name && !email && !role) {
+    throw new AppError('At least one field is required', 400);
+  }
+
+  const user = await User.findById(id);
+  if (!user) {
+    throw new AppError('User not found', 404);
+  }
+
+  if (name !== undefined) {
+    if (!isValidName(name)) {
+      throw new AppError('Name must be between 2 and 60 characters', 400);
+    }
+    user.name = name.trim();
+  }
+
+  if (email !== undefined) {
+    const normalizedEmail = normalizeEmail(email);
+    if (!isValidEmail(normalizedEmail)) {
+      throw new AppError('Please provide a valid email address', 400);
+    }
+
+    const existingUser = await User.findOne({ email: normalizedEmail });
+    if (existingUser && existingUser.id !== user.id) {
+      throw new AppError('Email already in use', 409);
+    }
+
+    user.email = normalizedEmail;
+  }
+
+  if (role !== undefined) {
+    if (!['admin', 'member'].includes(role)) {
+      throw new AppError("Role must be either 'admin' or 'member'", 400);
+    }
+
+    if (user.role === 'admin' && role === 'member') {
+      const adminCount = await User.countDocuments({ role: 'admin' });
+      if (adminCount <= 1) {
+        throw new AppError('Cannot demote the last admin account', 400);
+      }
+    }
+
+    user.role = role;
+  }
+
+  await user.save();
+
+  res.status(200).json({
+    success: true,
+    message: 'User updated',
+    data: {
+      user: sanitizeUser(user),
+    },
+  });
+});
+
+const deleteUserById = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const user = await User.findById(id);
+
+  if (!user) {
+    throw new AppError('User not found', 404);
+  }
+
+  if (user.role === 'admin') {
+    const adminCount = await User.countDocuments({ role: 'admin' });
+    if (adminCount <= 1) {
+      throw new AppError('Cannot delete the last admin account', 400);
+    }
+  }
+
+  await user.deleteOne();
+
+  res.status(200).json({
+    success: true,
+    message: 'User deleted',
+    data: {
+      user: sanitizeUser(user),
+    },
+  });
+});
+
 module.exports = {
-    registerUser,
-    loginUser,
-    getAllUsers,
-    updateUser,
-    deleteUser
+  getCurrentUser,
+  listUsers,
+  updateOwnProfile,
+  deleteOwnProfile,
+  updateUserById,
+  deleteUserById,
 };
