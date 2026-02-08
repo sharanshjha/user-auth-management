@@ -192,17 +192,27 @@ Failure:
 - Structured centralized error handling
 - Admin safety guard prevents deleting/demoting the final admin
 
-## Deployment (Render)
+## Deployment
 
-`render.yaml` includes:
+### Netlify (frontend)
 
-- `pulseauth-api` (Node web service)
-- `pulseauth-web` (Static frontend)
+This repo now includes a root `netlify.toml` that tells Netlify exactly how to build this monorepo:
+
+- Build command: `npm --prefix frontend ci && npm --prefix frontend run build`
+- Publish directory: `frontend/dist`
+- SPA rewrite fallback: `/* -> /index.html` (prevents React Router 404s on refresh/deep links)
+
+It also includes `frontend/public/_redirects` as a backup SPA rule.
+
+### Render (backend)
+
+`render.yaml` includes the API service blueprint.
 
 Set secrets in Render dashboard:
 
-- API: `MONGO_URI`, `JWT_SECRET`, `CLIENT_URL`
-- Web: `VITE_API_URL`
+- `MONGO_URI`
+- `JWT_SECRET`
+- `CLIENT_URL` (can be a comma-separated allow-list)
 
 ## Scripts
 
@@ -226,6 +236,8 @@ Set secrets in Render dashboard:
 
 ## Troubleshooting
 
+- Netlify `Page not found`: ensure the deploy uses this repo root so `netlify.toml` is detected, then redeploy.
+- Netlify path refresh returns 404: fixed by the included SPA rewrite config (`netlify.toml` + `_redirects`).
 - `401 Invalid authentication token`: login again to refresh your session
 - `403 not allowed`: current account is `member`; use an `admin` account
 - `Cannot delete the last admin account`: create/promote another admin first
